@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球天气预报</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #4a90d9;
+            --secondary-color: #6c5ce7;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 500;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .map-container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .map-title {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .map-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .map-toggle button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            background: #e8e8e8;
+            color: var(--text-secondary);
+        }
+
+        .map-toggle button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .map-toggle button:hover:not(.active) {
+            background: #d0d0d0;
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 15px;
+            z-index: 1;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .weather-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e8e8e8;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .search-box button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-box button:hover {
+            background: var(--secondary-color);
+        }
+
+        .section-title {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .city-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .city-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .city-item:hover {
+            background: #e8f4fd;
+            transform: translateX(5px);
+        }
+
+        .city-item.favorite {
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .city-info h4 {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .city-info span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .city-temp {
+            text-align: right;
+        }
+
+        .city-temp .temp {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .city-temp .condition {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .city-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .city-actions button {
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-add:hover {
+            background: #219a52;
+        }
+
+        .btn-remove {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-remove:hover {
+            background: #c0392b;
+        }
+
+        .btn-add-fav {
+            background: none;
+            border: none;
+            color: #27ae60;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 50%;
+            line-height: 1;
+            transition: background 0.2s;
+        }
+
+        .btn-add-fav:hover {
+            background: rgba(39, 174, 96, 0.15);
+        }
+
+        /* Weather Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .weather-detail {
+            text-align: center;
+        }
+
+        .weather-detail .temp-large {
+            font-size: 4rem;
+            font-weight: 300;
+            color: var(--primary-color);
+        }
+
+        .weather-detail .condition-large {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .weather-grid-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .weather-grid-item .label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .weather-grid-item .value {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .forecast-list {
+            margin-top: 20px;
+        }
+
+        .forecast-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .forecast-date {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .forecast-temp {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* Tab styling */
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Custom scrollbar */
+        .city-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .city-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .city-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .city-list::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+
+        /* Marker popup styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+        }
+
+        .marker-popup {
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .marker-popup h4 {
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        .marker-popup .temp {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .marker-popup .condition {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 全球天气预报</h1>
+        </header>
+
+        <div class="main-content">
+            <div class="map-container">
+                <div class="map-header">
+                    <span class="map-title">🗺️ 地图视图</span>
+                    <div class="map-toggle">
+                        <button id="worldMapBtn" class="active" onclick="switchMap('world')">世界</button>
+                        <button id="chinaMapBtn" onclick="switchMap('china')">中国</button>
+                        <button id="usaMapBtn" onclick="switchMap('usa')">美国</button>
+                        <button id="ukMapBtn" onclick="switchMap('uk')">英国</button>
+                        <button id="franceMapBtn" onclick="switchMap('france')">法国</button>
+                        <button id="germanyMapBtn" onclick="switchMap('germany')">德国</button>
+                        <button id="thailandMapBtn" onclick="switchMap('thailand')">泰国</button>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="sidebar">
+                <div class="weather-card">
+                    <div class="search-box">
+                        <input type="text" id="cityInput" placeholder="搜索城市..." onkeypress="handleSearch(event)">
+                        <button onclick="searchCity()">搜索</button>
+                    </div>
+
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('popular')">热门城市</div>
+                        <div class="tab" onclick="switchTab('favorites')">我的关注</div>
+                    </div>
+
+                    <div id="popularTab" class="tab-content active">
+                        <div class="city-list" id="popularCityList"></div>
+                    </div>
+
+                    <div id="favoritesTab" class="tab-content">
+                        <div class="city-list" id="favoritesCityList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weather Detail Modal -->
+    <div class="modal-overlay" id="weatherModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalCityName">城市天气</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="weather-detail" id="weatherDetail">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Global variables
+        let map;
+        let markers = {};
+        let currentMapType = 'world';
+        let weatherData = {};
+        
+        // Default capitals data (embedded for initial load)
+        const defaultCapitals = [
+            {name: "Beijing", country: "China", lat: 39.9042, lon: 116.4074},
+            {name: "Tokyo", country: "Japan", lat: 35.6762, lon: 139.6503},
+            {name: "Seoul", country: "South Korea", lat: 37.5665, lon: 126.978},
+            {name: "London", country: "United Kingdom", lat: 51.5074, lon: -0.1278},
+            {name: "Paris", country: "France", lat: 48.8566, lon: 2.3522},
+            {name: "New York", country: "United States", lat: 40.7128, lon: -74.006},
+            {name: "Sydney", country: "Australia", lat: -33.8688, lon: 151.2093},
+            {name: "Moscow", country: "Russia", lat: 55.7558, lon: 37.6173},
+            {name: "Berlin", country: "Germany", lat: 52.52, lon: 13.405},
+            {name: "Singapore", country: "Singapore", lat: 1.3521, lon: 103.8198},
+            {name: "Dubai", country: "UAE", lat: 25.2048, lon: 55.2708},
+            {name: "Mumbai", country: "India", lat: 19.076, lon: 72.8777},
+            {name: "Bangkok", country: "Thailand", lat: 13.7563, lon: 100.5018},
+            {name: "Cairo", country: "Egypt", lat: 30.0444, lon: 31.2357},
+            {name: "Rome", country: "Italy", lat: 41.9028, lon: 12.4964}
+        ];
+
+        // China major cities
+        const chinaCities = [
+            {name: "Beijing", country: "China", lat: 39.9042, lon: 116.4074},
+            {name: "Shanghai", country: "China", lat: 31.2304, lon: 121.4737},
+            {name: "Guangzhou", country: "China", lat: 23.1291, lon: 113.2644},
+            {name: "Shenzhen", country: "China", lat: 22.5431, lon: 114.0579},
+            {name: "Chengdu", country: "China", lat: 30.5728, lon: 104.0668},
+            {name: "Hangzhou", country: "China", lat: 30.2741, lon: 120.1551},
+            {name: "Wuhan", country: "China", lat: 30.5928, lon: 114.3055},
+            {name: "Xi'an", country: "China", lat: 34.3416, lon: 108.9398},
+            {name: "Chongqing", country: "China", lat: 29.4316, lon: 106.9123},
+            {name: "Tianjin", country: "China", lat: 39.3434, lon: 117.3616},
+            {name: "Nanjing", country: "China", lat: 32.0603, lon: 118.7969},
+            {name: "Suzhou", country: "China", lat: 31.2990, lon: 120.5853}
+        ];
+
+        // USA major cities
+        const usaCities = [
+            {name: "New York", country: "United States", lat: 40.7128, lon: -74.006},
+            {name: "Los Angeles", country: "United States", lat: 34.0522, lon: -118.2437},
+            {name: "Chicago", country: "United States", lat: 41.8781, lon: -87.6298},
+            {name: "Houston", country: "United States", lat: 29.7604, lon: -95.3698},
+            {name: "Phoenix", country: "United States", lat: 33.4484, lon: -112.074},
+            {name: "Philadelphia", country: "United States", lat: 39.9526, lon: -75.1652},
+            {name: "San Antonio", country: "United States", lat: 29.4241, lon: -98.4936},
+            {name: "San Diego", country: "United States", lat: 32.7157, lon: -117.1611},
+            {name: "Dallas", country: "United States", lat: 32.7767, lon: -96.797},
+            {name: "San Francisco", country: "United States", lat: 37.7749, lon: -122.4194},
+            {name: "Seattle", country: "United States", lat: 47.6062, lon: -122.3321},
+            {name: "Miami", country: "United States", lat: 25.7617, lon: -80.1918}
+        ];
+
+        // UK major cities
+        const ukCities = [
+            {name: "London", country: "United Kingdom", lat: 51.5074, lon: -0.1278},
+            {name: "Birmingham", country: "United Kingdom", lat: 52.4862, lon: -1.8904},
+            {name: "Manchester", country: "United Kingdom", lat: 53.4808, lon: -2.2426},
+            {name: "Liverpool", country: "United Kingdom", lat: 53.4084, lon: -2.9916},
+            {name: "Glasgow", country: "United Kingdom", lat: 55.8642, lon: -4.2518},
+            {name: "Bristol", country: "United Kingdom", lat: 51.4545, lon: -2.5879},
+            {name: "Edinburgh", country: "United Kingdom", lat: 55.9533, lon: -3.1883},
+            {name: "Leeds", country: "United Kingdom", lat: 53.8008, lon: -1.5491},
+            {name: "Sheffield", country: "United Kingdom", lat: 53.3811, lon: -1.4701},
+            {name: "Newcastle", country: "United Kingdom", lat: 54.9783, lon: -1.6178}
+        ];
+
+        // France major cities
+        const franceCities = [
+            {name: "Paris", country: "France", lat: 48.8566, lon: 2.3522},
+            {name: "Marseille", country: "France", lat: 43.2965, lon: 5.3698},
+            {name: "Lyon", country: "France", lat: 45.764, lon: 4.8357},
+            {name: "Toulouse", country: "France", lat: 43.6047, lon: 1.4442},
+            {name: "Nice", country: "France", lat: 43.7102, lon: 7.262},
+            {name: "Nantes", country: "France", lat: 47.2184, lon: -1.5536},
+            {name: "Strasbourg", country: "France", lat: 48.5734, lon: 7.7521},
+            {name: "Montpellier", country: "France", lat: 43.6108, lon: 3.8767},
+            {name: "Bordeaux", country: "France", lat: 44.8378, lon: -0.5792},
+            {name: "Lille", country: "France", lat: 50.6292, lon: 3.0573}
+        ];
+
+        // Germany major cities
+        const germanyCities = [
+            {name: "Berlin", country: "Germany", lat: 52.52, lon: 13.405},
+            {name: "Hamburg", country: "Germany", lat: 53.5511, lon: 9.9937},
+            {name: "Munich", country: "Germany", lat: 48.1351, lon: 11.582},
+            {name: "Cologne", country: "Germany", lat: 50.9375, lon: 6.9603},
+            {name: "Frankfurt", country: "Germany", lat: 50.1109, lon: 8.6821},
+            {name: "Stuttgart", country: "Germany", lat: 48.7758, lon: 9.1829},
+            {name: "Dusseldorf", country: "Germany", lat: 51.2277, lon: 6.7735},
+            {name: "Dortmund", country: "Germany", lat: 51.5136, lon: 7.4653},
+            {name: "Essen", country: "Germany", lat: 51.4556, lon: 7.0116},
+            {name: "Leipzig", country: "Germany", lat: 51.3397, lon: 12.3731}
+        ];
+
+        // Thailand major cities
+        const thailandCities = [
+            {name: "Bangkok", country: "Thailand", lat: 13.7563, lon: 100.5018},
+            {name: "Chiang Mai", country: "Thailand", lat: 18.7883, lon: 98.9853},
+            {name: "Phuket", country: "Thailand", lat: 7.8804, lon: 98.3923},
+            {name: "Pattaya", country: "Thailand", lat: 12.9273, lon: 100.8824},
+            {name: "Chonburi", country: "Thailand", lat: 13.3611, lon: 100.9841},
+            {name: "Songkhla", country: "Thailand", lat: 7.1898, lon: 100.5951},
+            {name: "Nakhon Ratchasima", country: "Thailand", lat: 14.9705, lon: 102.0839},
+            {name: "Chiang Rai", country: "Thailand", lat: 19.9075, lon: 99.8325},
+            {name: "Ayutthaya", country: "Thailand", lat: 14.3532, lon: 100.5773},
+            {name: "Khon Kaen", country: "Thailand", lat: 16.4322, lon: 102.8236}
+        ];
+
+        // All city data
+        const countryCities = {
+            world: defaultCapitals,
+            china: chinaCities,
+            usa: usaCities,
+            uk: ukCities,
+            france: franceCities,
+            germany: germanyCities,
+            thailand: thailandCities
+        };
+
+        // 从后端 API 加载数据
+        async function loadData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return { favoriteCities: [] };
+            }
+        }
+
+        // 从后端获取关注城市
+        async function loadFavorites() {
+            try {
+                const response = await fetch('/api/favorites');
+                const favorites = await response.json();
+                return favorites;
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+                return [];
+            }
+        }
+
+        // 保存到后端 - 添加关注城市
+        async function saveFavorite(city) {
+            try {
+                const response = await fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(city)
+                });
+                const result = await response.json();
+                return result.favorites;
+            } catch (error) {
+                console.error('Error saving favorite:', error);
+                return null;
+            }
+        }
+
+        // 从后端删除关注城市
+        async function removeFavoriteAPI(cityName) {
+            try {
+                const response = await fetch(`/api/favorites/${cityName}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                return result.favorites;
+            } catch (error) {
+                console.error('Error removing favorite:', error);
+                return null;
+            }
+        }
+
+        // Weather code to description
+        function weatherCodeToDesc(code) {
+            const codes = {
+                0: "晴朗",
+                1: "晴间多云",
+                2: "多云",
+                3: "阴天",
+                45: "雾",
+                48: "雾凇",
+                51: "小毛毛雨",
+                53: "中毛毛雨",
+                55: "大雨",
+                61: "小雨",
+                63: "中雨",
+                65: "大雨",
+                71: "小雪",
+                73: "中雪",
+                75: "大雪",
+                80: "小阵雨",
+                81: "中阵雨",
+                82: "大阵雨",
+                95: "雷暴",
+                96: "雷暴+冰雹",
+                99: "雷暴+大冰雹"
+            };
+            return codes[code] || "未知";
+        }
+
+        // Get weather icon
+        function getWeatherIcon(code) {
+            if (code === 0) return '☀️';
+            if (code >= 1 && code <= 3) return '⛅';
+            if (code >= 45 && code <= 48) return '🌫️';
+            if (code >= 51 && code <= 55) return '🌧️';
+            if (code >= 61 && code <= 65) return '🌧️';
+            if (code >= 71 && code <= 75) return '❄️';
+            if (code >= 80 && code <= 82) return '🌦️';
+            if (code >= 95) return '⛈️';
+            return '🌤️';
+        }
+
+        // Fetch weather data with 1-hour localStorage cache
+        const CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
+
+        async function fetchWeather(lat, lon, cityName, country) {
+            const cacheKey = `weather_${cityName}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const { timestamp, data } = JSON.parse(cached);
+                    if (Date.now() - timestamp < CACHE_TTL) {
+                        return data;
+                    }
+                } catch (e) {
+                    // ignore corrupted cache entry
+                }
+            }
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+
+            try {
+                const response = await fetch(url);
+                const raw = await response.json();
+
+                const data = {
+                    location: { name: cityName, country: country, lat, lon },
+                    current: raw.current,
+                    daily: raw.daily
+                };
+                localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+                return data;
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                return null;
+            }
+        }
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([20, 0], 2);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            loadWeatherForCities(defaultCapitals);
+        }
+
+        // Map center coordinates for each country
+        const mapCenters = {
+            world: { lat: 20, lon: 0, zoom: 2 },
+            china: { lat: 35, lon: 105, zoom: 4 },
+            usa: { lat: 39.8283, lon: -98.5795, zoom: 4 },
+            uk: { lat: 54.0, lon: -2.0, zoom: 5 },
+            france: { lat: 46.2276, lon: 2.2137, zoom: 5 },
+            germany: { lat: 51.1657, lon: 10.4515, zoom: 5 },
+            thailand: { lat: 15.87, lon: 100.9925, zoom: 5 }
+        };
+
+        // Switch between world and China map
+        function switchMap(type) {
+            currentMapType = type;
+            
+            // Update button states
+            document.getElementById('worldMapBtn').classList.toggle('active', type === 'world');
+            document.getElementById('chinaMapBtn').classList.toggle('active', type === 'china');
+            document.getElementById('usaMapBtn').classList.toggle('active', type === 'usa');
+            document.getElementById('ukMapBtn').classList.toggle('active', type === 'uk');
+            document.getElementById('franceMapBtn').classList.toggle('active', type === 'france');
+            document.getElementById('germanyMapBtn').classList.toggle('active', type === 'germany');
+            document.getElementById('thailandMapBtn').classList.toggle('active', type === 'thailand');
+            
+            // Clear existing markers
+            Object.values(markers).forEach(marker => map.removeLayer(marker));
+            markers = {};
+            
+            // Get cities for the selected country
+            const cities = countryCities[type] || countryCities.world;
+            const center = mapCenters[type] || mapCenters.world;
+            
+            map.setView([center.lat, center.lon], center.zoom);
+            loadWeatherForCities(cities);
+        }
+
+        // Load weather for cities
+        async function loadWeatherForCities(cities) {
+            const container = document.getElementById('popularCityList');
+            container.innerHTML = '<div class="loading">加载天气数据...</div>';
+            
+            // Fetch weather for all cities
+            for (const city of cities) {
+                const weather = await fetchWeather(city.lat, city.lon, city.name, city.country);
+                if (weather) {
+                    weatherData[city.name] = weather;
+                    addMarker(city, weather);
+                }
+            }
+            
+            renderCityList(cities);
+        }
+
+        // Add marker to map
+        function addMarker(city, weather) {
+            const temp = weather.current?.temperature_2m || 'N/A';
+            const code = weather.current?.weather_code || 0;
+            
+            const marker = L.marker([city.lat, city.lon]).addTo(map);
+            
+            const popupContent = `
+                <div class="marker-popup">
+                    <h4>${city.name}, ${city.country}</h4>
+                    <div class="temp">${temp}°C</div>
+                    <div class="condition">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            marker.on('click', () => showWeatherDetail(city.name));
+            
+            markers[city.name] = marker;
+        }
+
+        // Render city list
+        async function renderCityList(cities) {
+            const container = document.getElementById('popularCityList');
+            const data = await loadData();
+            const favorites = data.favoriteCities || [];
+            
+            let html = '';
+            cities.forEach(city => {
+                const weather = weatherData[city.name];
+                if (!weather) return;
+                
+                const temp = weather.current?.temperature_2m || 'N/A';
+                const code = weather.current?.weather_code || 0;
+                const isFavorite = favorites.some(f => f.name === city.name);
+                
+                html += `
+                    <div class="city-item ${isFavorite ? 'favorite' : ''}" onclick="showWeatherDetail('${city.name}')">
+                        <div class="city-info">
+                            <h4>${city.name}</h4>
+                            <span>${city.country}</span>
+                        </div>
+                        <div class="city-temp">
+                            <div class="temp">${temp}°C</div>
+                            <div class="condition">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
+                        </div>
+                        ${!isFavorite ? `<button class="btn-add-fav" onclick="event.stopPropagation(); addToFavorites('${city.name}')" title="添加到关注">+</button>` : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || '<div class="empty-state">暂无数据</div>';
+            
+            renderFavorites();
+        }
+
+        // Render favorites
+        async function renderFavorites() {
+            const container = document.getElementById('favoritesCityList');
+            const data = await loadData();
+            const favorites = data.favoriteCities || [];
+            
+            if (favorites.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>暂无关注城市</p><p style="font-size: 0.8rem; margin-top: 10px;">点击热门城市旁边的 + 添加到关注</p></div>';
+                return;
+            }
+            
+            let html = '';
+            for (const city of favorites) {
+                let weather = weatherData[city.name];
+                
+                if (!weather) {
+                    weather = await fetchWeather(city.lat, city.lon, city.name, city.country);
+                    if (weather) {
+                        weatherData[city.name] = weather;
+                    }
+                }
+                
+                if (weather) {
+                    const temp = weather.current?.temperature_2m || 'N/A';
+                    const code = weather.current?.weather_code || 0;
+                    
+                    html += `
+                        <div class="city-item favorite" onclick="showWeatherDetail('${city.name}')">
+                            <div class="city-info">
+                                <h4>${city.name}</h4>
+                                <span>${city.country}</span>
+                            </div>
+                            <div class="city-temp">
+                                <div class="temp">${temp}°C</div>
+                                <div class="condition">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
+                            </div>
+                        </div>
+                        <div class="city-actions">
+                            <button class="btn-remove" onclick="removeFavorite('${city.name}', event)">移除</button>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML = html || '<div class="empty-state">加载中...</div>';
+        }
+
+        // Show weather detail modal
+        async function showWeatherDetail(cityName) {
+            const modal = document.getElementById('weatherModal');
+            const detailContainer = document.getElementById('weatherDetail');
+            const titleEl = document.getElementById('modalCityName');
+            
+            modal.classList.add('active');
+            detailContainer.innerHTML = '<div class="loading">加载中...</div>';
+            
+            let weather = weatherData[cityName];
+            
+            if (!weather) {
+                // Try to find city in all city arrays
+                const city = findCity(cityName);
+                
+                if (city) {
+                    weather = await fetchWeather(city.lat, city.lon, city.name, city.country);
+                    if (weather) weatherData[cityName] = weather;
+                }
+            }
+            
+            if (!weather) {
+                detailContainer.innerHTML = '<div class="empty-state">无法获取天气数据</div>';
+                return;
+            }
+            
+            titleEl.textContent = `${weather.location.name}, ${weather.location.country}`;
+            
+            const temp = weather.current?.temperature_2m || 'N/A';
+            const feelsLike = weather.current?.apparent_temperature || 'N/A';
+            const humidity = weather.current?.relative_humidity_2m || 'N/A';
+            const wind = weather.current?.wind_speed_10m || 'N/A';
+            const code = weather.current?.weather_code || 0;
+            
+            // Build forecast HTML
+            let forecastHTML = '<div class="forecast-list"><h4 style="margin-bottom: 10px;">3天预报</h4>';
+            const times = weather.daily?.time || [];
+            const maxTemps = weather.daily?.temperature_2m_max || [];
+            const minTemps = weather.daily?.temperature_2m_min || [];
+            const codes = weather.daily?.weather_code || [];
+            
+            for (let i = 0; i < Math.min(3, times.length); i++) {
+                forecastHTML += `
+                    <div class="forecast-item">
+                        <span class="forecast-date">${times[i]}</span>
+                        <span class="forecast-temp">${getWeatherIcon(codes[i])} ${minTemps[i]}° ~ ${maxTemps[i]}°C</span>
+                    </div>
+                `;
+            }
+            forecastHTML += '</div>';
+            
+            detailContainer.innerHTML = `
+                <div class="temp-large">${temp}°C</div>
+                <div class="condition-large">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
+                
+                <div class="weather-grid">
+                    <div class="weather-grid-item">
+                        <div class="label">体感温度</div>
+                        <div class="value">${feelsLike}°C</div>
+                    </div>
+                    <div class="weather-grid-item">
+                        <div class="label">湿度</div>
+                        <div class="value">${humidity}%</div>
+                    </div>
+                    <div class="weather-grid-item">
+                        <div class="label">风速</div>
+                        <div class="value">${wind} km/h</div>
+                    </div>
+                    <div class="weather-grid-item">
+                        <div class="label">纬度/经度</div>
+                        <div class="value">${weather.location.lat.toFixed(2)}, ${weather.location.lon.toFixed(2)}</div>
+                    </div>
+                </div>
+                
+                ${forecastHTML}
+                
+                <div class="city-actions" style="justify-content: center; margin-top: 15px;">
+                    <button class="btn-add" onclick="addToFavorites('${cityName}')">+ 添加到关注</button>
+                </div>
+            `;
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('weatherModal').classList.remove('active');
+        }
+
+        // Search city
+        async function searchCity() {
+            const input = document.getElementById('cityInput');
+            const cityName = input.value.trim();
+            
+            if (!cityName) return;
+            
+            // Geocoding
+            const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=zh&format=json`;
+            
+            try {
+                const response = await fetch(geoUrl);
+                const data = await response.json();
+                
+                if (!data.results || data.results.length === 0) {
+                    showToast('未找到该城市');
+                    return;
+                }
+                
+                const result = data.results[0];
+                const city = {
+                    name: result.name,
+                    country: result.country || '',
+                    lat: result.latitude,
+                    lon: result.longitude
+                };
+                
+                // Fetch weather
+                const weather = await fetchWeather(city.lat, city.lon, city.name, city.country);
+                if (weather) {
+                    weatherData[city.name] = weather;
+                    addMarker(city, weather);
+                    map.setView([city.lat, city.lon], 10);
+                    showWeatherDetail(city.name);
+                }
+                
+                input.value = '';
+            } catch (error) {
+                showToast('搜索失败，请重试');
+            }
+        }
+
+        // Handle search keypress
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                searchCity();
+            }
+        }
+
+        // Find city in all city arrays
+        function findCity(cityName) {
+            for (const key in countryCities) {
+                const city = countryCities[key].find(c => c.name === cityName);
+                if (city) return city;
+            }
+            // Try to get from weatherData
+            if (weatherData[cityName]) {
+                return {
+                    name: weatherData[cityName].location.name,
+                    country: weatherData[cityName].location.country,
+                    lat: weatherData[cityName].location.lat,
+                    lon: weatherData[cityName].location.lon
+                };
+            }
+            return null;
+        }
+
+        // Add to favorites
+        async function addToFavorites(cityName) {
+            const data = await loadData();
+            
+            // Check if already exists
+            if (data.favoriteCities && data.favoriteCities.some(f => f.name === cityName)) {
+                showToast('该城市已在关注列表中');
+                return;
+            }
+            
+            // Find city data
+            const city = findCity(cityName);
+            
+            if (city) {
+                const favorites = await saveFavorite(city);
+                if (favorites) {
+                    renderFavorites();
+                    showToast('已添加到关注列表');
+                    
+                    // Update popular list to show favorite indicator
+                    const cities = countryCities[currentMapType] || countryCities.world;
+                    renderCityList(cities);
+                }
+            }
+        }
+
+        // Remove from favorites
+        async function removeFavorite(cityName, event) {
+            event.stopPropagation();
+            
+            const favorites = await removeFavoriteAPI(cityName);
+            if (favorites !== null) {
+                renderFavorites();
+                const cities = countryCities[currentMapType] || countryCities.world;
+                renderCityList(cities);
+                showToast('已从关注列表移除');
+            }
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'popular') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('popularTab').classList.add('active');
+            } else {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('favoritesTab').classList.add('active');
+            }
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initMap);
+
+        // Close modal when clicking outside
+        document.getElementById('weatherModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
