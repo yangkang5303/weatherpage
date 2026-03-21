@@ -947,6 +947,17 @@
             return t('uvExt');
         }
 
+        // XSS-safe HTML escaping for all user/API-derived strings
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // Wind direction: degrees → compass
         function degToCompass(deg) {
             const zh = ['北','东北','东','东南','南','西南','西','西北'];
@@ -1291,8 +1302,8 @@
 
             const popupContent = `
                 <div class="marker-popup">
-                    <h4>${city.name}, ${city.country}</h4>
-                    <div class="temp">${temp}${tempLabel()}</div>
+                    <h4>${escapeHtml(city.name)}, ${escapeHtml(city.country)}</h4>
+                    <div class="temp">${escapeHtml(temp)}${tempLabel()}</div>
                     <div class="condition">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
                     ${timeStr}
                 </div>
@@ -1324,18 +1335,20 @@
                     ? `<span class="city-local-time" data-timezone="${tz}">${localTime}</span>`
                     : '';
 
+                const eName = escapeHtml(city.name);
+                const eCountry = escapeHtml(city.country);
                 html += `
-                    <div class="city-item ${isFavorite ? 'favorite' : ''}" onclick="showWeatherDetail('${city.name}')">
+                    <div class="city-item ${isFavorite ? 'favorite' : ''}" onclick="showWeatherDetail('${eName}')">
                         <div class="city-info">
-                            <h4>${city.name}</h4>
-                            <span>${city.country}</span>
+                            <h4>${eName}</h4>
+                            <span>${eCountry}</span>
                             ${timeHTML}
                         </div>
                         <div class="city-temp">
-                            <div class="temp">${temp}${tempLabel()}</div>
+                            <div class="temp">${escapeHtml(temp)}${tempLabel()}</div>
                             <div class="condition">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
                         </div>
-                        ${!isFavorite ? `<button class="btn-add-fav" onclick="event.stopPropagation(); addToFavorites('${city.name}')" title="${t('addFav')}" aria-label="${t('addFav')}: ${city.name}">+</button>` : ''}
+                        ${!isFavorite ? `<button class="btn-add-fav" onclick="event.stopPropagation(); addToFavorites('${eName}')" title="${t('addFav')}" aria-label="${t('addFav')}: ${eName}">+</button>` : ''}
                     </div>
                 `;
             });
@@ -1371,19 +1384,21 @@
                     const temp = toDisplayTemp(weather.current?.temperature_2m);
                     const code = weather.current?.weather_code || 0;
 
+                    const eName = escapeHtml(city.name);
+                    const eCountry = escapeHtml(city.country);
                     html += `
-                        <div class="city-item favorite" onclick="showWeatherDetail('${city.name}')">
+                        <div class="city-item favorite" onclick="showWeatherDetail('${eName}')">
                             <div class="city-info">
-                                <h4>${city.name}</h4>
-                                <span>${city.country}</span>
+                                <h4>${eName}</h4>
+                                <span>${eCountry}</span>
                             </div>
                             <div class="city-temp">
-                                <div class="temp">${temp}${tempLabel()}</div>
+                                <div class="temp">${escapeHtml(temp)}${tempLabel()}</div>
                                 <div class="condition">${getWeatherIcon(code)} ${weatherCodeToDesc(code)}</div>
                             </div>
                         </div>
                         <div class="city-actions">
-                            <button class="btn-remove" onclick="removeFavorite('${city.name}', event)" aria-label="${t('remove')}: ${city.name}">${t('remove')}</button>
+                            <button class="btn-remove" onclick="removeFavorite('${eName}', event)" aria-label="${t('remove')}: ${eName}">${t('remove')}</button>
                         </div>
                     `;
                 }
@@ -1420,7 +1435,7 @@
                 return;
             }
             
-            titleEl.textContent = `${weather.location.name}, ${weather.location.country}`;
+            titleEl.textContent = `${weather.location.name}, ${weather.location.country}`; // textContent is safe
             
             const temp = toDisplayTemp(weather.current?.temperature_2m);
             const feelsLike = toDisplayTemp(weather.current?.apparent_temperature);
@@ -1487,7 +1502,7 @@
                             </div>
                         </div>
                         <div style="text-align:center; margin-top:12px;">
-                            <button class="btn-add" onclick="addToFavorites('${cityName}')">${t('addFav')}</button>
+                            <button class="btn-add" onclick="addToFavorites('${escapeHtml(cityName)}')">${t('addFav')}</button>
                         </div>
                     </div>
                     <div class="modal-right">
