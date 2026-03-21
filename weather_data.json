@@ -23,6 +23,12 @@
       "country": "Australia",
       "lat": -33.8688,
       "lon": 151.2093
+    },
+    {
+      "name": "Seoul",
+      "country": "South Korea",
+      "lat": 37.5665,
+      "lon": 126.978
     }
   ],
   "defaultCapitals": []
