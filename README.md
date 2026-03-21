@@ -21,11 +21,10 @@ A real-time global weather dashboard with an interactive map, 7-day forecasts, a
 
 ## Screenshots
 
-| World Map View | City Detail Modal |
-|---|---|
-| <img width="1429" height="755" alt="image" src="https://github.com/user-attachments/assets/85555449-fada-40b0-869b-9aa258b8dd44" />
+
+ <img width="1429" height="755" alt="image" src="https://github.com/user-attachments/assets/85555449-fada-40b0-869b-9aa258b8dd44" />
  | <img width="790" height="498" alt="image" src="https://github.com/user-attachments/assets/adc6ceaa-5698-42e3-a386-20acd6934448" />
- |
+ 
 
 ## Getting Started
 
