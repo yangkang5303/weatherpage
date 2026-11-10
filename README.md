@@ -2,7 +2,7 @@
 
 A real-time global weather dashboard with an interactive map, 7-day forecasts, and city management — available in Chinese and English.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.0-lightgrey) ![License](https://img.shields.io/badge/license-MIT-green)
+![Static Site](https://img.shields.io/badge/static-site-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
@@ -16,7 +16,7 @@ A real-time global weather dashboard with an interactive map, 7-day forecasts, a
 - **°C / °F toggle** — Switch temperature units with a single button
 - **Dark mode** — One-click light/dark theme switch
 - **EN / 中文** — Full bilingual UI (English and Chinese)
-- **Favorites** — Save and manage your own city list (persisted server-side)
+- **Favorites** — Save and manage your own city list (saved in your browser, private to each visitor)
 - **City search** — Search any city worldwide via geocoding
 
 ## Screenshots
@@ -28,47 +28,36 @@ A real-time global weather dashboard with an interactive map, 7-day forecasts, a
 
 ## Getting Started
 
-### Local (Python)
+This is a pure static site (no backend). Favorites are stored in each visitor's browser (`localStorage`).
+
+### Local
 
 ```bash
 git clone https://github.com/yangkang5303/weatherpage.git
-cd weatherpage
-pip install flask
-python server.py
+cd weatherpage/public
+python3 -m http.server 8080
 ```
 
 Open **http://localhost:8080**
 
-### Docker
+### Deploy to Cloudflare
 
 ```bash
-docker compose up -d
+npx wrangler deploy
 ```
 
-Open **http://localhost:8080**
-
-The `weather_data.json` file is volume-mounted so your favorites persist across container restarts.
+Or connect the repo in the Cloudflare dashboard (Workers & Pages) with deploy command `npx wrangler deploy`. Security headers (CSP etc.) are defined in `public/_headers`.
 
 ## Project Structure
 
 ```
 weatherpage/
-├── index.html          # Single-page frontend (Leaflet, vanilla JS)
-├── server.py           # Flask backend (favorites API)
-├── weather_data.json   # Persisted favorites list
-├── Dockerfile
-└── docker-compose.yml
+├── public/
+│   ├── index.html      # Single-page app (Leaflet, vanilla JS)
+│   └── _headers        # Cloudflare security headers
+├── wrangler.jsonc      # Cloudflare config
+└── LICENSE
 ```
-
-## API Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Serve the app |
-| `GET` | `/api/data` | Get all data |
-| `GET` | `/api/favorites` | List favorite cities |
-| `POST` | `/api/favorites` | Add a city `{name, country, lat, lon}` |
-| `DELETE` | `/api/favorites/<name>` | Remove a city |
 
 ## External Services
 
@@ -80,11 +69,10 @@ weatherpage/
 
 ## Security
 
-- Input validation on all API endpoints (type, length, lat/lon range checks)
+- No backend, no database, no user data on the server
+- Favorites live only in the visitor's own browser
 - XSS protection via HTML escaping on all user/API-derived content
-- Security headers: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
-- Favorites capped at 50 entries
-- Production server runs with `debug=False`
+- Security headers (CSP, X-Frame-Options, etc.) via `public/_headers`
 
 ## License
 
